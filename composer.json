@@ -1,0 +1,42 @@
+{
+    "name": "tediscript/breeze-crud",
+    "description": "Generate CRUD based on Laravel Breeze starter kit",
+    "keywords": ["laravel", "crud"],
+    "license": "MIT",
+    "support": {
+        "issues": "https://github.com/tediscript/breeze-crud/issues",
+        "source": "https://github.com/tediscript/breeze-crud"
+    },
+    "authors": [
+        {
+            "name": "Tedi Fibri",
+            "email": "tediscript@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^7.3|^8.0",
+        "illuminate/filesystem": "^8.42",
+        "illuminate/support": "^8.42",
+        "illuminate/validation": "^8.42"
+    },
+    "autoload": {
+        "psr-4": {
+            "Tediscript\\BreezeCrud\\": "src/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.x-dev"
+        },
+        "laravel": {
+            "providers": [
+                "Tediscript\\BreezeCrud\\BreezeCrudServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
