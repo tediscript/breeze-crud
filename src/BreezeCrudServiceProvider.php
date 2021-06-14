@@ -29,7 +29,7 @@ class BreezeCrudServiceProvider extends ServiceProvider implements DeferrablePro
         }
 
         $this->commands([
-            Console\InstallCommand::class,
+            Console\CrudCommand::class,
         ]);
     }
 
@@ -40,6 +40,6 @@ class BreezeCrudServiceProvider extends ServiceProvider implements DeferrablePro
      */
     public function provides()
     {
-        return [Console\InstallCommand::class];
+        return [Console\CrudCommand::class];
     }
 }
