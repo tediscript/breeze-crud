@@ -1,2 +1,2 @@
 # breeze-crud
-Generate CRUD base on Laravel Breeze starter kit
+Generate CRUD based on Laravel Breeze starter kit
