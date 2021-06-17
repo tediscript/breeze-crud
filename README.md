@@ -19,7 +19,7 @@ Since it's not (yet) available in packagist.org then here is how to install it. 
 ## Usage
 Just like you create model via php artisan.
 
-* Create CRUD
+### Create CRUD
 ```
 php artisan breeze:crud ModelName
 ```
@@ -32,7 +32,7 @@ Given ModelName is `School` then it will generate:
 - `resources/views/schools/show.blade.php`
 and add resource controller to `routes/web.php`
 
-* Delete CRUD
+### Delete CRUD
 ```
 php artisan breeze:crud ModelName -d
 ```
