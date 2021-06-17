@@ -30,6 +30,7 @@ Given ModelName is `School` then it will generate:
 - `resources/views/schools/edit.blade.php`
 - `resources/views/schools/index.blade.php`
 - `resources/views/schools/show.blade.php`
+
 and add resource controller to `routes/web.php`
 
 ### Delete CRUD
