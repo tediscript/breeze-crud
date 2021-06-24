@@ -7,7 +7,6 @@
 
     <div class="py-4">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            {{-- this is container --}}
 
             <div
                 class="py-3 px-5 mb-4 bg-white overflow-hidden shadow-sm sm:rounded-lg border-b border-gray-200 text-gray-700 text-sm font-medium">
@@ -21,10 +20,8 @@
             </div>
 
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-b border-gray-200">
-                {{-- this is card --}}
 
                 <div class="p-6">
-                    {{-- this is card body --}}
 
                     @if ($errors->any())
                         <div class="mb-4">
