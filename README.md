@@ -1,4 +1,4 @@
-# Breeze CRUD (v0.1.0)
+# Breeze CRUD
 Generate CRUD based on Laravel Breeze starter kit. It will generate Model, resource Controller and Views. It also register resource controller to `routes/web.php`. There are 2 attributes as a sample (title and description). Oh you have to generate migration manually for it.
 
 ## Installation via composer
@@ -11,7 +11,7 @@ Or add this script to your `composer.json` and run `composer update`
 
 ```
     "require-dev": {
-        "tediscript/breeze-crud": "^1.0.0"
+        "tediscript/breeze-crud": "^0.1.0"
     }
 ```
 
