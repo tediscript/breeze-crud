@@ -38,7 +38,7 @@
                     @endif
 
                     <div class="flex items-center justify-end mb-3">
-                        <a href="{{ route('users.edit', $user->id) }}"
+                        <a href="{{ route('__LPNAME__.edit', $__CNAME__->id) }}"
                             class="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 active:bg-gray-900 focus:outline-none focus:border-gray-900 focus:ring ring-gray-300 disabled:opacity-25 transition ease-in-out duration-150">
                             {{ __('Edit') }}
                         </a>
