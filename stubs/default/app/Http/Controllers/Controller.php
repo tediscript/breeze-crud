@@ -90,7 +90,7 @@ class __NAME__Controller extends Controller
         $params = $request->all();
         $__CNAME__->update($params);
 
-        return redirect()->route('__LPNAME__.edit', $__CNAME__->id)
+        return redirect()->route('__LPNAME__.show', $__CNAME__->id)
             ->with('flash.variant', 'success')
             ->with('flash.message', __('__NAME__ updated!'));
     }

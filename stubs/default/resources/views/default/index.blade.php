@@ -49,7 +49,7 @@
                                 <tr class="bg-gray-200 text-gray-600 text-sm leading-normal">
                                     <th class="p-3 text-right">{{ __('ID') }}</th>
                                     <th class="p-3 text-left">{{ __('Title') }}</th>
-                                    <th class="p-3 text-left hidden md:block">{{ __('Description') }}</th>
+                                    <th class="p-3 text-left">{{ __('Description') }}</th>
                                     <th class="p-3 text-right">&nbsp;</th>
                                 </tr>
                             </thead>
@@ -57,8 +57,8 @@
                                 @foreach ($__LPNAME__ as $__CNAME__)
                                     <tr class="border-b border-gray-200">
                                         <td class="p-3 text-right">{{ $__CNAME__->id }}</td>
-                                        <td class="p-3 text-left">{{ $__CNAME__->title }}</td>
-                                        <td class="p-3 text-left hidden md:block">{{ $__CNAME__->description }}</td>
+                                        <td class="p-3">{{ $__CNAME__->title }}</td>
+                                        <td class="p-3">{{ $__CNAME__->description }}</td>
                                         <td class="p-3 text-right">
                                             <form method="post"
                                                 action="{{ route('__LPNAME__.destroy', $__CNAME__->id) }}">
