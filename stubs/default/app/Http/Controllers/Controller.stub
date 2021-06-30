@@ -37,8 +37,7 @@ class __NAME__Controller extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string',
-            'description' => 'nullable|string',
+            __VALIDATIONSSTR__
         ]);
 
         $__CNAME__ = __NAME__::create([
@@ -83,8 +82,7 @@ class __NAME__Controller extends Controller
     public function update(Request $request, __NAME__ $__CNAME__)
     {
         $request->validate([
-            'title' => 'required|string',
-            'description' => 'nullable|string',
+            __VALIDATIONSSTR__
         ]);
 
         $params = $request->all();
