@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class __NAME__ extends Model
+class {{ name }} extends Model
 {
     use HasFactory;
 
@@ -15,6 +15,8 @@ class __NAME__ extends Model
      * @var array
      */
     protected $fillable = [
-        __TABLEFIELDS__
+        {{ @foreach(tableFields as tableField) }}
+        '{{ tableField }}',
+        {{ @endforeach }}
     ];
 }

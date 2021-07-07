@@ -111,19 +111,59 @@ class CrudCommand extends Command
 
             //override
             $item->ValidationType = $item->Type == 'tinyint(1)' ? 'boolean' : $item->ValidationType;
-            $item->InputType = $item->ValidationType == 'boolean' ? 'check' : $item->InputType;
+            $item->InputType = $item->ValidationType == 'boolean' ? 'checkbox' : $item->InputType;
             $item->InputType = Str::contains($item->Type, 'text') ? 'textarea' : $item->InputType;
             $item->InputType = $item->Type == 'blob' ? 'textarea' : $item->InputType;
-            $item->InputType = $item->Type == 'year' ? 'year' : $item->InputType;
-            
+            $item->InputType = $item->Type == 'time' ? 'time' : $item->InputType;
+
             $item->Min = Str::contains($item->Type, 'unsigned') ? 0 : null;
             $item->Max = null;
             preg_match_all('/\d+/m', $item->Type, $matches);
             if (!Str::contains($item->Type, 'decimal')) {
                 $item->Max = isset($matches[0][0]) ? $matches[0][0] : null;
             }
+            //options for select or radio
+            $item->Options = null;
+            if (Str::startsWith($item->Type, 'enum(') || Str::startsWith($item->Type, 'set(')) {
+                $optionsStr = Str::between($item->Type, '(', ')');
+                $item->Options = array_map(function ($i) {
+                    return substr(trim($i), 1, -1);
+                }, explode(',', $optionsStr));
+            }
+            //radio if less than 7
+            if (!is_null($item->Options) && count($item->Options) < 7) {
+                $item->InputType = 'radio';
+            }
+            //select if more than 6
+            if (!is_null($item->Options) && count($item->Options) > 6) {
+                $item->InputType = 'select';
+            }
+            //email (temporary)
+            if (Str::contains($item->Type, 'email')) {
+                $item->InputType = 'email';
+                $item->ValidationType = 'email';
+            }
+            //password (temporary)
+            if (Str::contains($item->Type, 'password')) {
+                $item->InputType = 'password';
+                $item->ValidationType = 'password';
+            }
         }
         return $tableDesciption;
+    }
+
+    protected function getTableDescription($exclude = [], $limit = 0)
+    {
+        $res = [];
+        foreach ($this->tableDescription as $t) {
+            if (!in_array($t->Field, $exclude)) {
+                $res[] = $t;
+                if ($limit > 0 && count($res) == $limit) {
+                    break;
+                }
+            }
+        }
+        return $res;
     }
 
     protected function getValidationsStr($exclude = [])
@@ -144,8 +184,47 @@ class CrudCommand extends Command
                 $vs .= "',\n\t\t\t";
             }
         }
-        return $vs ? $vs : "'title' => 'required|string',\n\t\t\t'description' => 'nullable|string',";
+        return trim($vs ? $vs : "'title' => 'required|string',\n\t\t\t'description' => 'nullable|string',");
     }
+
+    protected function getValidations($exclude = [])
+    {
+        $name = $this->argument('name');
+        $tableName = ($table = $this->option('table')) ? $table : Str::snake(Str::plural($name));
+
+        $validations = [];
+        foreach ($this->tableDescription as $field) {
+            if (!in_array($field->Field, $exclude)) {
+                extract((array) $field);
+                $vs = $Null == 'YES' ? "nullable" : "required";
+                $vs .= "|$ValidationType";
+                $vs .= is_null($Min) ? '' : "|min:${Min}";
+                $vs .= is_null($Max) || $ValidationType == 'boolean' ? '' : "|max:${Max}";
+                $vs .= $Key == 'UNI' ? "|unique:${tableName}" : '';
+                $validations[$Field] = $vs;
+            }
+        }
+        return $validations;
+    }
+
+    // protected function getInputsStr($exclude = [])
+    // {
+    //     $inputsStr = '';
+    //     $inputs = [];
+    //     foreach ($this->tableDescription as $t) {
+    //         if (!in_array($t->Field, $exclude)) {
+    //             $field = $t->Field;
+    //             $inputs[] = "'${field}' => \$request->${field}";
+    //         }
+    //     }
+    //     if (!empty($inputs)) {
+    //         $inputsStr = implode(",\n\t\t\t", $inputs);
+    //     }
+
+    //     return empty($inputsStr)
+    //     ? "'title' => \$request->title,\n\t\t\t'description' => \$request->description,"
+    //     : $inputsStr;
+    // }
 
     protected function getTableFieldsStr($exclude = [])
     {
@@ -163,6 +242,17 @@ class CrudCommand extends Command
         return empty($tableFieldsStr) ? "'title',\n\t\t'description'," : $tableFieldsStr;
     }
 
+    protected function getTableFields($exclude = [])
+    {
+        $fields = [];
+        foreach ($this->tableDescription as $t) {
+            if (!in_array($t->Field, $exclude)) {
+                $fields[] = $t->Field;
+            }
+        }
+        return $fields;
+    }
+
     protected function resetCrud($name)
     {
         Artisan::call("breeze:crud ${name} -d");
@@ -171,109 +261,308 @@ class CrudCommand extends Command
 
     protected function createCrud($name)
     {
-        //create controller
-        $this->createController($name);
-
         //create model
-        $this->createModel($name);
+        // $this->createModel();
+
+        //create controller
+        $this->createController();
 
         //create views
-        // $this->createViews($name);
+        // $this->createResourceViews();
 
         //create Route
-        // $this->createRoute($name);
+        // $this->createRoute();
 
         return 0;
     }
 
-    protected function createController($name)
+    // protected function createController()
+    // {
+    //     $this->line('Create controller...');
+
+    //     $name = $this->argument('name');
+    //     $exclude = ['id', 'updated_at', 'created_at'];
+    //     $data['name'] = $name;
+    //     $data['instanceName'] = Str::camel($name);
+    //     $data['instanceCollectionName'] = Str::plural(Str::camel($name));
+    //     $data['resourceName'] = Str::plural(Str::lower($name));
+    //     $data['validations'] = $this->getValidationsStr($exclude);
+    //     $data['inputs'] = $this->getInputsStr($exclude);
+    //     $controllerPath = app_path("Http/Controllers/${name}Controller.php");
+    //     $controllerStubPath = __DIR__ . '/../../stubs/default/app/Http/Controllers/Controller.stub';
+    //     $controllerTemplate = $this->renderStub($controllerStubPath, $data);
+    //     file_put_contents($controllerPath, $controllerTemplate);
+    // }
+
+    protected function createController()
     {
         $this->line('Create controller...');
+
+        $name = $this->argument('name');
+        $data['name'] = $name;
         $exclude = ['id', 'updated_at', 'created_at'];
-        $validationsStr = $this->getValidationsStr($exclude);
-        $cName = Str::camel($name);
-        $cpName = Str::plural($cName);
-        $lName = Str::lower($name);
-        $lpName = Str::plural($lName);
-        $controllerPath = app_path("Http/Controllers/${name}Controller.php");
-        $controllerStubPath = __DIR__ . '/../../stubs/default/app/Http/Controllers/Controller.stub';
-        $controllerStubStr = file_get_contents($controllerStubPath);
-        $controllerStubStr = Str::replace('__NAME__', $name, $controllerStubStr);
-        $controllerStubStr = Str::replace('__LNAME__', $lName, $controllerStubStr);
-        $controllerStubStr = Str::replace('__LPNAME__', $lpName, $controllerStubStr);
-        $controllerStubStr = Str::replace('__CNAME__', $cName, $controllerStubStr);
-        $controllerStubStr = Str::replace('__CPNAME__', $cpName, $controllerStubStr);
-        $controllerStubStr = Str::replace('__VALIDATIONSSTR__', $validationsStr, $controllerStubStr);
-        file_put_contents($controllerPath, $controllerStubStr);
+        $data['tableFields'] = !empty($tableFields = $this->getTableFields($exclude))
+            ? $tableFields : ['title', 'description'];
+        $data['instanceName'] = Str::camel($name);
+        $data['instanceCollectionName'] = Str::plural(Str::camel($name));
+        $data['resourceName'] = Str::plural(Str::lower($name));
+        $data['validations'] = $this->getValidations($exclude);
+        $template = $this->renderStub('controller.stub', $data);
+        $path = app_path("Http/Controllers/${name}Controller.php");
+        file_put_contents($path, $template);
     }
 
-    protected function createModel($name)
+    protected function createModel()
     {
         $this->line('Create model...');
+
+        $name = $this->argument('name');
+        $data['name'] = $name;
         $exclude = ['id', 'updated_at', 'created_at'];
-        $tableFields = ($tableFieldsstr = $this->getTableFieldsStr($exclude)) ? $tableFieldsstr : "'title',\n\t\t'description',";
-        $modelPath = app_path("Models/${name}.php");
-        $modelStubPath = __DIR__ . '/../../stubs/default/app/Models/Model.stub';
-        $modelStubStr = file_get_contents($modelStubPath);
-        $modelStubStr = Str::replace('__NAME__', $name, $modelStubStr);
-        $modelStubStr = Str::replace('__TABLEFIELDS__', $tableFields, $modelStubStr);
-        file_put_contents($modelPath, $modelStubStr);
+        $data['tableFields'] = !empty($tableFields = $this->getTableFields($exclude))
+            ? $tableFields : ['title', 'description'];
+        $template = $this->renderStub('model.stub', $data);
+        $path = app_path("Models/${name}.php");
+        file_put_contents($path, $template);
     }
 
-    protected function createViews($name)
+    protected function createResourceViews()
     {
         $this->line('Create views...');
-        $lName = Str::lower($name);
-        $lpName = Str::plural($lName);
-        $pName = Str::plural($name);
-        $cName = Str::camel($name);
-        $viewsPath = resource_path("views/${lpName}");
+
+        $name = $this->argument('name');
+        $data['name'] = $name;
+        $data['pluralName'] = Str::plural($name);
+        $resourceName = Str::plural(Str::lower($name));
+        $data['resourceName'] = $resourceName;
+        $data['instanceName'] = Str::camel($name);
+        $data['instanceCollectionName'] = Str::plural(Str::camel($name));
+        $exclude = ['id', 'created_at', 'updated_at'];
+        $limit = 3;
+        $viewsPath = resource_path("views/${resourceName}");
         File::ensureDirectoryExists($viewsPath);
-        //index
-        $indexStubPath = __DIR__ . '/../../stubs/default/resources/views/default/index.blade.php';
-        $indexTemplate = file_get_contents($indexStubPath);
-        $indexTemplate = Str::replace('__PNAME__', $pName, $indexTemplate);
-        $indexTemplate = Str::replace('__LPNAME__', $lpName, $indexTemplate);
-        $indexTemplate = Str::replace('__CNAME__', $cName, $indexTemplate);
-        $indexViewPath = "$viewsPath/index.blade.php";
-        file_put_contents($indexViewPath, $indexTemplate);
+        $stubPath = __DIR__ . '/../../stubs/default/resources/views/default';
+
         //create
-        $createStubPath = __DIR__ . '/../../stubs/default/resources/views/default/create.blade.php';
-        $createTemplate = file_get_contents($createStubPath);
-        $createTemplate = Str::replace('__NAME__', $name, $createTemplate);
-        $createTemplate = Str::replace('__PNAME__', $pName, $createTemplate);
-        $createTemplate = Str::replace('__LPNAME__', $lpName, $createTemplate);
+        $createInputs = [];
+        foreach ($this->getTableDescription($exclude) as $t) {
+            $createInputData['title'] = Str::ucfirst($t->Field);
+            $createInputData['field'] = $t->Field;
+            $createInputData['type'] = $t->InputType;
+            $createInputData['id'] = Str::kebab($t->Field);
+            $createInputData['required'] = $t->Null == 'NO' ? 'required' : '';
+            $inputStubPath = "${stubPath}/tiles/create-form-text.stub";
+            if ($t->InputType == 'textarea') {
+                $inputStubPath = "${stubPath}/tiles/create-form-textarea.stub";
+            }
+            if ($t->InputType == 'checkbox') {
+                $inputStubPath = "${stubPath}/tiles/create-form-checkbox.stub";
+            }
+            if ($t->InputType == 'select') {
+                $inputStubPath = "${stubPath}/tiles/create-form-select.stub";
+            }
+            $createInputs[] = $this->renderStub($inputStubPath, $createInputData);
+        }
+        $data['createInputs'] = trim(implode("\n", $createInputs));
+        $createStubPath = "${stubPath}/create.stub";
+        $createTemplate = $this->renderStub($createStubPath, $data);
         $createViewPath = "$viewsPath/create.blade.php";
         file_put_contents($createViewPath, $createTemplate);
+
+        //index
+        $ths = [];
+        foreach ($this->getTableDescription($exclude, $limit) as $t) {
+            $thData['title'] = Str::ucfirst($t->Field);
+            $thStubPath = "${stubPath}/tiles/th.stub";
+            $ths[] = $this->renderStub($thStubPath, $thData);
+        }
+        $data['ths'] = trim(implode("\n", $ths));
+        $tds = [];
+        foreach ($this->getTableDescription($exclude, $limit) as $t) {
+            $tdData['instanceName'] = Str::camel($name);
+            $tdData['field'] = $t->Field;
+            $tdStubPath = "${stubPath}/tiles/td.stub";
+            $tds[] = $this->renderStub($tdStubPath, $tdData);
+        }
+        $data['tds'] = trim(implode("\n", $tds));
+        $indexStubPath = "${stubPath}/index.stub";
+        $indexTemplate = $this->renderStub($indexStubPath, $data);
+        $indexViewPath = "$viewsPath/index.blade.php";
+        file_put_contents($indexViewPath, $indexTemplate);
+
         //show
-        $showStubPath = __DIR__ . '/../../stubs/default/resources/views/default/show.blade.php';
-        $showTemplate = file_get_contents($showStubPath);
-        $showTemplate = Str::replace('__NAME__', $name, $showTemplate);
-        $showTemplate = Str::replace('__PNAME__', $pName, $showTemplate);
-        $showTemplate = Str::replace('__LPNAME__', $lpName, $showTemplate);
-        $showTemplate = Str::replace('__CNAME__', $cName, $showTemplate);
+        $dtdds = [];
+        $i = 0;
+        foreach ($this->getTableDescription($exclude) as $t) {
+            $dtddData['title'] = Str::ucfirst($t->Field);
+            $dtddData['instanceName'] = Str::camel($name);
+            $dtddData['field'] = $t->Field;
+            $dtddData['bg'] = ($i % 2 == 0) ? 'bg-gray-200' : 'bg-white';
+            $dtddStubPath = "${stubPath}/tiles/dtdd.stub";
+            $dtdds[] = $this->renderStub($dtddStubPath, $dtddData);
+            $i++;
+        }
+        $data['dtdds'] = trim(implode("\n", $dtdds));
+        $showStubPath = "${stubPath}/show.stub";
+        $showTemplate = $this->renderStub($showStubPath, $data);
         $showViewPath = "$viewsPath/show.blade.php";
         file_put_contents($showViewPath, $showTemplate);
-        //edit
-        $editStubPath = __DIR__ . '/../../stubs/default/resources/views/default/edit.blade.php';
-        $editTemplate = file_get_contents($editStubPath);
-        $editTemplate = Str::replace('__NAME__', $name, $editTemplate);
-        $editTemplate = Str::replace('__PNAME__', $pName, $editTemplate);
-        $editTemplate = Str::replace('__LPNAME__', $lpName, $editTemplate);
-        $editTemplate = Str::replace('__CNAME__', $cName, $editTemplate);
-        $editViewPath = "$viewsPath/edit.blade.php";
-        file_put_contents($editViewPath, $editTemplate);
     }
 
-    protected function createRoute($name)
+    // protected function renderStubLoop($stub, $data = [])
+    // {
+    //     //get foreach variables
+    //     preg_match('/(?<=@foreach\().*(?=\) *}})/m', $stub, $matchesFor);
+    //     $arrFor = array_map('trim', explode(' ', $matchesFor[0]));
+    //     $iterable = $data[$arrFor[0]];
+
+    //     //get template to iterate
+    //     preg_match('/({{ ?@foreach.*? ?}})([\s\S]*?)({{ ?@endforeach ?}})/m', $stub, $matchesTemplate);
+    //     $stubTemplate = $matchesTemplate[2];
+    //     $template = '';
+
+    //     //regular forach
+    //     if (count($arrFor) == 3) {
+    //         foreach ($iterable as $value) {
+    //             $renderValue = rtrim(preg_replace('/{{ *' . $arrFor[2] . ' *}}/', $value, $stubTemplate));
+    //             $template .= $renderValue;
+    //         }
+    //     }
+
+    //     //key value foreach
+    //     if (count($arrFor) > 3) {
+    //         foreach ($iterable as $key => $value) {
+    //             $renderKey = rtrim(preg_replace('/{{ *' . $arrFor[2] . ' *}}/', $key, $stubTemplate));
+    //             $renderValue = rtrim(preg_replace('/{{ *' . $arrFor[4] . ' *}}/', $value, $renderKey));
+    //             $template .= $renderValue;
+    //         }
+    //     }
+
+    //     $template = trim($template);
+
+    //     foreach ($data as $key => $value) {
+    //         if (!is_array($value)) {
+    //             $template = preg_replace('/{{ *' . $key . ' *}}/', $value, $template);
+    //         }
+    //     }
+    //     return $template;
+    // }
+
+    // protected function renderStub($stub, $data = [])
+    // {
+    //     $template = file_get_contents($stub);
+    //     // $template = $stub;
+
+    //     //get loop stubs
+    //     preg_match_all('/{{ *@foreach[\s\S]*?{{ *@endforeach *}}/m', $template, $loopMatches);
+
+    //     $loopStubs = [];
+    //     $i = 1;
+    //     foreach ($loopMatches[0] as $loopMatch) {
+    //         $loopVar = "__loopVar${i}";
+    //         $template = implode("{{ ${loopVar} }}", explode($loopMatch, $template, 2));
+    //         $data[$loopVar] = $this->renderStubLoop($loopMatch, $data);
+    //         $i++;
+    //     }
+
+    //     //replace var
+    //     foreach ($data as $key => $value) {
+    //         if (!is_array($value)) {
+    //             $template = preg_replace('/{{ *' . $key . ' *}}/', $value, $template);
+    //         }
+    //     }
+    //     return $template;
+    // }
+
+    protected function renderStub($filename, $data = [])
+    {
+        $stubPath = $this->getStub($filename);
+        $stub = file_get_contents($stubPath);
+
+        $keywords = [
+            'php',
+            'endphp',
+            'if',
+            'elseif',
+            'else',
+            'endif',
+            'unless',
+            'endunless',
+            'isset',
+            'endisset',
+            'empty',
+            'endempty',
+            'switch',
+            'case',
+            'break',
+            'default',
+            'endswitch',
+            'for',
+            'endfor',
+            'foreach',
+            'endforeach',
+            'forelse',
+            'endforelse',
+            'while',
+            'endwhile',
+            'continue',
+        ];
+
+        $encodes = [
+            '/<\?php/m' => '[PHP_OPEN_TAG]',
+            '/\?>/m' => '[PHP_CLOSE_TAG]',
+            '/<x-/m' => '[BC_OPEN_TAG]',
+            '/<\/x-/m' => '[BC_CLOSE_TAG]',
+            '/{{--/m' => '[COMMENT_OPEN_TAG]',
+            '/--}}/m' => '[COMMENT_CLOSE_TAG]',
+            '/(?<!@)({{ *)(\w+?)( *}})/m' => '[STUBVAR_OPEN_TAG]$2[STUBVAR_CLOSE_TAG]',
+            '/(@?{{ *)(.+?)( *}})/m' => '@$1$2$3',
+            '/(@?{!! *)(.+?)( *!!})/m' => '@$1$2$3',
+            '/(@\w+)/m' => '@$1',
+            '/(#)(' . implode('|', $keywords) . ')/m' => '@$2',
+        ];
+
+        foreach ($encodes as $key => $value) {
+            $stub = preg_replace($key, $value, $stub);
+        }
+
+        $stub = preg_replace('/\[STUBVAR_OPEN_TAG\](\w+?)\[STUBVAR_CLOSE_TAG\]/m', '{{ \$$1 }}', $stub);
+
+        $tempBlade = '__render_stub_temp__';
+        $tempPath = resource_path("views/${tempBlade}.blade.php");
+        file_put_contents($tempPath, $stub);
+        $tmpl = view($tempBlade, $data)->render();
+
+        unlink(resource_path("views/${tempBlade}.blade.php"));
+
+        $decodes = [
+            '[PHP_OPEN_TAG]' => '<?php',
+            '[PHP_CLOSE_TAG]' => '?>',
+            '[BC_OPEN_TAG]' => '<x-',
+            '[BC_CLOSE_TAG]' => '</x-',
+            '[COMMENT_OPEN_TAG]' => '{{--',
+            '[COMMENT_CLOSE_TAG]' => '--}}',
+            '[STUBVAR_OPEN_TAG]' => '{{ ',
+            '[STUBVAR_CLOSE_TAG]' => ' }}',
+        ];
+
+        foreach ($decodes as $key => $value) {
+            $tmpl = str_replace($key, $value, $tmpl);
+        }
+
+        return $tmpl;
+    }
+
+    protected function createRoute()
     {
         $this->line('Create route...');
-        $lName = Str::lower($name);
-        $lpName = Str::plural($lName);
+
+        $name = $this->argument('name');
+        $resourceName = Str::plural(Str::lower($name));
         $routePath = base_path('routes/web.php');
         $controllerNamespace = "use App\Http\Controllers\\${name}Controller;";
         $this->insertToFile($controllerNamespace, $routePath, 3);
-        $resourceRoute = "Route::resource('${lpName}', ${name}Controller::class);";
+        $resourceRoute = "Route::resource('${resourceName}', ${name}Controller::class);";
         $this->insertToFile($resourceRoute, $routePath, 0);
     }
 
@@ -306,6 +595,30 @@ class CrudCommand extends Command
         $this->deleteIfExists($viewsPath);
 
         return 0;
+    }
+
+    /**
+     * Get the stub file for the generator.
+     *
+     * @return string
+     */
+    protected function getStub($filename)
+    {
+        $layout = 'default';
+        $relativePath = "/stubs/make-crud/${layout}/${filename}";
+        return $this->resolveStubPath($relativePath);
+    }
+
+    /**
+     * Resolve the fully-qualified path to the stub.
+     *
+     * @param  string  $stub
+     * @return string
+     */
+    protected function resolveStubPath($stub)
+    {
+        return file_exists($customPath = base_path(trim($stub, '/')))
+        ? $customPath : __DIR__ . '/../..' . $stub;
     }
 
     /**

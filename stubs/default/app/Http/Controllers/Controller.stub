@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\__NAME__;
+use App\Models\{{ name }};
 use Illuminate\Http\Request;
 
-class __NAME__Controller extends Controller
+class {{ name }}Controller extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -14,8 +14,8 @@ class __NAME__Controller extends Controller
      */
     public function index()
     {
-        $__CPNAME__ = __NAME__::paginate(10);
-        return view('__LPNAME__.index', compact('__CPNAME__'));
+        ${{ instanceCollectionName }} = {{ name }}::paginate(10);
+        return view('{{ resourceName }}.index', compact('{{ instanceCollectionName }}'));
     }
 
     /**
@@ -25,7 +25,7 @@ class __NAME__Controller extends Controller
      */
     public function create()
     {
-        return view('__LPNAME__.create');
+        return view('{{ resourceName }}.create');
     }
 
     /**
@@ -37,17 +37,20 @@ class __NAME__Controller extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            __VALIDATIONSSTR__
+            {{ @foreach(validations as key => value) }}
+            '{{ key }}' => '{{ value }}',
+            {{ @endforeach }}
         ]);
 
-        $__CNAME__ = __NAME__::create([
-            'title' => $request->input('title'),
-            'description' => $request->input('description'),
+        ${{ instanceName }} = {{ name }}::create([
+            {{ @foreach(tableFields as tableField) }}
+            '{{ tableField }}' => $request->{{ tableField }},
+            {{ @endforeach }}
         ]);
 
-        return redirect()->route('__LPNAME__.show', $__CNAME__->id)
+        return redirect()->route('{{ resourceName }}.show', ${{ instanceName }}->id)
             ->with('flash.variant', 'success')
-            ->with('flash.message', __('__NAME__ created!'));
+            ->with('flash.message', __('{{ name }} created!'));
     }
 
     /**
@@ -56,9 +59,9 @@ class __NAME__Controller extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show(__NAME__ $__CNAME__)
+    public function show({{ name }} ${{ instanceName }})
     {
-        return view('__LPNAME__.show', compact('__CNAME__'));
+        return view('{{ resourceName }}.show', compact('{{ instanceName }}'));
     }
 
     /**
@@ -67,9 +70,9 @@ class __NAME__Controller extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function edit(__NAME__ $__CNAME__)
+    public function edit({{ name }} ${{ instanceName }})
     {
-        return view('__LPNAME__.edit', compact('__CNAME__'));
+        return view('{{ resourceName }}.edit', compact('{{ instanceName }}'));
     }
 
     /**
@@ -79,18 +82,23 @@ class __NAME__Controller extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, __NAME__ $__CNAME__)
+    public function update(Request $request, {{ name }} ${{ instanceName }})
     {
         $request->validate([
-            __VALIDATIONSSTR__
+            {{ @foreach(validations as key => value) }}
+            '{{ key }}' => '{{ value }}',
+            {{ @endforeach }}
         ]);
 
-        $params = $request->all();
-        $__CNAME__->update($params);
+        ${{ instanceName }}->update([
+            {{ @foreach(tableFields as tableField) }}
+            '{{ tableField }}' => $request->{{ tableField }},
+            {{ @endforeach }}
+        ]);
 
-        return redirect()->route('__LPNAME__.show', $__CNAME__->id)
+        return redirect()->route('{{ resourceName }}.show', ${{ instanceName }}->id)
             ->with('flash.variant', 'success')
-            ->with('flash.message', __('__NAME__ updated!'));
+            ->with('flash.message', __('{{ name }} updated!'));
     }
 
     /**
@@ -99,11 +107,11 @@ class __NAME__Controller extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy(__NAME__ $__CNAME__)
+    public function destroy({{ name }} ${{ instanceName }})
     {
-        $__CNAME__->delete();
-        return redirect()->route('__LPNAME__.index')
+        ${{ instanceName }}->delete();
+        return redirect()->route('{{ resourceName }}.index')
             ->with('flash.variant', 'success')
-            ->with('flash.message', __('__NAME__ deleted!'));
+            ->with('flash.message', __('{{ name }} deleted!'));
     }
 }

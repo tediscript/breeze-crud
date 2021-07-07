@@ -1,0 +1,8 @@
+                        <div class="block mt-4">
+                            <label for="{{ id }}" class="inline-flex items-center">
+                                <input id="{{ id }}" type="checkbox" name="{{ field }}" value="1" {{ old('{{ field }}') == '1' ? 'checked' : ''  }}
+                                    class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50" />
+                                <span class="ml-2 font-medium text-sm text-gray-700">{{ __('{{ title }}')  }}</span>
+                            </label>
+                        </div>
+                        

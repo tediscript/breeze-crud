@@ -1,0 +1,1 @@
+                                    <th class="p-3 text-left">{{ __('{{ title }}') }}</th>
