@@ -5,7 +5,7 @@
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'reference' => '836bad201eb5e0b1f634a59ef8e653e8685c7319',
+        'reference' => '30684d861924274cede0b4a8591da738ca3763c6',
         'name' => 'tediscript/breeze-crud',
         'dev' => true,
     ),
@@ -460,7 +460,7 @@
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
-            'reference' => '836bad201eb5e0b1f634a59ef8e653e8685c7319',
+            'reference' => '30684d861924274cede0b4a8591da738ca3763c6',
             'dev_requirement' => false,
         ),
         'voku/portable-ascii' => array(
