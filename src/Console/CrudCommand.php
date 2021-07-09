@@ -60,16 +60,16 @@ class CrudCommand extends Command
 
         // delete
         if ($this->option('delete')) {
-            return $this->deleteCrud($name);
+            return $this->deleteCrud();
         }
 
         //delete
         if ($this->option('reset')) {
-            return $this->resetCrud($name);
+            return $this->resetCrud();
         }
 
         //create
-        return $this->createCrud($name);
+        return $this->createCrud();
     }
 
     protected function getTableName()
@@ -166,27 +166,6 @@ class CrudCommand extends Command
         return $res;
     }
 
-    protected function getValidationsStr($exclude = [])
-    {
-        $name = $this->argument('name');
-        $tableName = ($table = $this->option('table')) ? $table : Str::snake(Str::plural($name));
-
-        $vs = '';
-        foreach ($this->tableDescription as $field) {
-            if (!in_array($field->Field, $exclude)) {
-                extract((array) $field);
-                $vs .= "'${Field}' => '";
-                $vs .= $Null == 'YES' ? "nullable" : "required";
-                $vs .= "|$ValidationType";
-                $vs .= is_null($Min) ? '' : "|min:${Min}";
-                $vs .= is_null($Max) || $ValidationType == 'boolean' ? '' : "|max:${Max}";
-                $vs .= $Key == 'UNI' ? "|unique:${tableName}" : '';
-                $vs .= "',\n\t\t\t";
-            }
-        }
-        return trim($vs ? $vs : "'title' => 'required|string',\n\t\t\t'description' => 'nullable|string',");
-    }
-
     protected function getValidations($exclude = [])
     {
         $name = $this->argument('name');
@@ -206,25 +185,6 @@ class CrudCommand extends Command
         }
         return $validations;
     }
-
-    // protected function getInputsStr($exclude = [])
-    // {
-    //     $inputsStr = '';
-    //     $inputs = [];
-    //     foreach ($this->tableDescription as $t) {
-    //         if (!in_array($t->Field, $exclude)) {
-    //             $field = $t->Field;
-    //             $inputs[] = "'${field}' => \$request->${field}";
-    //         }
-    //     }
-    //     if (!empty($inputs)) {
-    //         $inputsStr = implode(",\n\t\t\t", $inputs);
-    //     }
-
-    //     return empty($inputsStr)
-    //     ? "'title' => \$request->title,\n\t\t\t'description' => \$request->description,"
-    //     : $inputsStr;
-    // }
 
     protected function getTableFieldsStr($exclude = [])
     {
@@ -253,46 +213,31 @@ class CrudCommand extends Command
         return $fields;
     }
 
-    protected function resetCrud($name)
+    protected function resetCrud()
     {
+        $this->line('Reset crud...');
+
+        $name = $this->argument('name');
         Artisan::call("breeze:crud ${name} -d");
         Artisan::call("breeze:crud ${name}");
     }
 
-    protected function createCrud($name)
+    protected function createCrud()
     {
         //create model
-        // $this->createModel();
+        $this->createModel();
 
         //create controller
         $this->createController();
 
         //create views
-        // $this->createResourceViews();
+        $this->createViews();
 
         //create Route
-        // $this->createRoute();
+        $this->createRoute();
 
         return 0;
     }
-
-    // protected function createController()
-    // {
-    //     $this->line('Create controller...');
-
-    //     $name = $this->argument('name');
-    //     $exclude = ['id', 'updated_at', 'created_at'];
-    //     $data['name'] = $name;
-    //     $data['instanceName'] = Str::camel($name);
-    //     $data['instanceCollectionName'] = Str::plural(Str::camel($name));
-    //     $data['resourceName'] = Str::plural(Str::lower($name));
-    //     $data['validations'] = $this->getValidationsStr($exclude);
-    //     $data['inputs'] = $this->getInputsStr($exclude);
-    //     $controllerPath = app_path("Http/Controllers/${name}Controller.php");
-    //     $controllerStubPath = __DIR__ . '/../../stubs/default/app/Http/Controllers/Controller.stub';
-    //     $controllerTemplate = $this->renderStub($controllerStubPath, $data);
-    //     file_put_contents($controllerPath, $controllerTemplate);
-    // }
 
     protected function createController()
     {
@@ -302,7 +247,7 @@ class CrudCommand extends Command
         $data['name'] = $name;
         $exclude = ['id', 'updated_at', 'created_at'];
         $data['tableFields'] = !empty($tableFields = $this->getTableFields($exclude))
-            ? $tableFields : ['title', 'description'];
+        ? $tableFields : ['title', 'description'];
         $data['instanceName'] = Str::camel($name);
         $data['instanceCollectionName'] = Str::plural(Str::camel($name));
         $data['resourceName'] = Str::plural(Str::lower($name));
@@ -320,159 +265,49 @@ class CrudCommand extends Command
         $data['name'] = $name;
         $exclude = ['id', 'updated_at', 'created_at'];
         $data['tableFields'] = !empty($tableFields = $this->getTableFields($exclude))
-            ? $tableFields : ['title', 'description'];
+        ? $tableFields : ['title', 'description'];
         $template = $this->renderStub('model.stub', $data);
         $path = app_path("Models/${name}.php");
         file_put_contents($path, $template);
     }
 
-    protected function createResourceViews()
+    protected function createViews()
     {
         $this->line('Create views...');
 
         $name = $this->argument('name');
         $data['name'] = $name;
         $data['pluralName'] = Str::plural($name);
-        $resourceName = Str::plural(Str::lower($name));
-        $data['resourceName'] = $resourceName;
         $data['instanceName'] = Str::camel($name);
         $data['instanceCollectionName'] = Str::plural(Str::camel($name));
         $exclude = ['id', 'created_at', 'updated_at'];
-        $limit = 3;
+        $data['tableDescription'] = $this->getTableDescription($exclude);
+        $data['limit'] = 3;
+        $resourceName = Str::plural(Str::lower($name));
+        $data['resourceName'] = $resourceName;
         $viewsPath = resource_path("views/${resourceName}");
         File::ensureDirectoryExists($viewsPath);
-        $stubPath = __DIR__ . '/../../stubs/default/resources/views/default';
 
         //create
-        $createInputs = [];
-        foreach ($this->getTableDescription($exclude) as $t) {
-            $createInputData['title'] = Str::ucfirst($t->Field);
-            $createInputData['field'] = $t->Field;
-            $createInputData['type'] = $t->InputType;
-            $createInputData['id'] = Str::kebab($t->Field);
-            $createInputData['required'] = $t->Null == 'NO' ? 'required' : '';
-            $inputStubPath = "${stubPath}/tiles/create-form-text.stub";
-            if ($t->InputType == 'textarea') {
-                $inputStubPath = "${stubPath}/tiles/create-form-textarea.stub";
-            }
-            if ($t->InputType == 'checkbox') {
-                $inputStubPath = "${stubPath}/tiles/create-form-checkbox.stub";
-            }
-            if ($t->InputType == 'select') {
-                $inputStubPath = "${stubPath}/tiles/create-form-select.stub";
-            }
-            $createInputs[] = $this->renderStub($inputStubPath, $createInputData);
-        }
-        $data['createInputs'] = trim(implode("\n", $createInputs));
-        $createStubPath = "${stubPath}/create.stub";
-        $createTemplate = $this->renderStub($createStubPath, $data);
+        $createTemplate = $this->renderStub('create.stub', $data);
         $createViewPath = "$viewsPath/create.blade.php";
         file_put_contents($createViewPath, $createTemplate);
 
+        //edit
+        $editTemplate = $this->renderStub('edit.stub', $data);
+        $editViewPath = "$viewsPath/edit.blade.php";
+        file_put_contents($editViewPath, $editTemplate);
+
         //index
-        $ths = [];
-        foreach ($this->getTableDescription($exclude, $limit) as $t) {
-            $thData['title'] = Str::ucfirst($t->Field);
-            $thStubPath = "${stubPath}/tiles/th.stub";
-            $ths[] = $this->renderStub($thStubPath, $thData);
-        }
-        $data['ths'] = trim(implode("\n", $ths));
-        $tds = [];
-        foreach ($this->getTableDescription($exclude, $limit) as $t) {
-            $tdData['instanceName'] = Str::camel($name);
-            $tdData['field'] = $t->Field;
-            $tdStubPath = "${stubPath}/tiles/td.stub";
-            $tds[] = $this->renderStub($tdStubPath, $tdData);
-        }
-        $data['tds'] = trim(implode("\n", $tds));
-        $indexStubPath = "${stubPath}/index.stub";
-        $indexTemplate = $this->renderStub($indexStubPath, $data);
+        $indexTemplate = $this->renderStub('index.stub', $data);
         $indexViewPath = "$viewsPath/index.blade.php";
         file_put_contents($indexViewPath, $indexTemplate);
 
         //show
-        $dtdds = [];
-        $i = 0;
-        foreach ($this->getTableDescription($exclude) as $t) {
-            $dtddData['title'] = Str::ucfirst($t->Field);
-            $dtddData['instanceName'] = Str::camel($name);
-            $dtddData['field'] = $t->Field;
-            $dtddData['bg'] = ($i % 2 == 0) ? 'bg-gray-200' : 'bg-white';
-            $dtddStubPath = "${stubPath}/tiles/dtdd.stub";
-            $dtdds[] = $this->renderStub($dtddStubPath, $dtddData);
-            $i++;
-        }
-        $data['dtdds'] = trim(implode("\n", $dtdds));
-        $showStubPath = "${stubPath}/show.stub";
-        $showTemplate = $this->renderStub($showStubPath, $data);
+        $showTemplate = $this->renderStub('show.stub', $data);
         $showViewPath = "$viewsPath/show.blade.php";
         file_put_contents($showViewPath, $showTemplate);
     }
-
-    // protected function renderStubLoop($stub, $data = [])
-    // {
-    //     //get foreach variables
-    //     preg_match('/(?<=@foreach\().*(?=\) *}})/m', $stub, $matchesFor);
-    //     $arrFor = array_map('trim', explode(' ', $matchesFor[0]));
-    //     $iterable = $data[$arrFor[0]];
-
-    //     //get template to iterate
-    //     preg_match('/({{ ?@foreach.*? ?}})([\s\S]*?)({{ ?@endforeach ?}})/m', $stub, $matchesTemplate);
-    //     $stubTemplate = $matchesTemplate[2];
-    //     $template = '';
-
-    //     //regular forach
-    //     if (count($arrFor) == 3) {
-    //         foreach ($iterable as $value) {
-    //             $renderValue = rtrim(preg_replace('/{{ *' . $arrFor[2] . ' *}}/', $value, $stubTemplate));
-    //             $template .= $renderValue;
-    //         }
-    //     }
-
-    //     //key value foreach
-    //     if (count($arrFor) > 3) {
-    //         foreach ($iterable as $key => $value) {
-    //             $renderKey = rtrim(preg_replace('/{{ *' . $arrFor[2] . ' *}}/', $key, $stubTemplate));
-    //             $renderValue = rtrim(preg_replace('/{{ *' . $arrFor[4] . ' *}}/', $value, $renderKey));
-    //             $template .= $renderValue;
-    //         }
-    //     }
-
-    //     $template = trim($template);
-
-    //     foreach ($data as $key => $value) {
-    //         if (!is_array($value)) {
-    //             $template = preg_replace('/{{ *' . $key . ' *}}/', $value, $template);
-    //         }
-    //     }
-    //     return $template;
-    // }
-
-    // protected function renderStub($stub, $data = [])
-    // {
-    //     $template = file_get_contents($stub);
-    //     // $template = $stub;
-
-    //     //get loop stubs
-    //     preg_match_all('/{{ *@foreach[\s\S]*?{{ *@endforeach *}}/m', $template, $loopMatches);
-
-    //     $loopStubs = [];
-    //     $i = 1;
-    //     foreach ($loopMatches[0] as $loopMatch) {
-    //         $loopVar = "__loopVar${i}";
-    //         $template = implode("{{ ${loopVar} }}", explode($loopMatch, $template, 2));
-    //         $data[$loopVar] = $this->renderStubLoop($loopMatch, $data);
-    //         $i++;
-    //     }
-
-    //     //replace var
-    //     foreach ($data as $key => $value) {
-    //         if (!is_array($value)) {
-    //             $template = preg_replace('/{{ *' . $key . ' *}}/', $value, $template);
-    //         }
-    //     }
-    //     return $template;
-    // }
 
     protected function renderStub($filename, $data = [])
     {
@@ -516,9 +351,12 @@ class CrudCommand extends Command
             '/{{--/m' => '[COMMENT_OPEN_TAG]',
             '/--}}/m' => '[COMMENT_CLOSE_TAG]',
             '/(?<!@)({{ *)(\w+?)( *}})/m' => '[STUBVAR_OPEN_TAG]$2[STUBVAR_CLOSE_TAG]',
+            '/(?<!@)({{ *)(.+?)( *}})/m' => '[VAR_OPEN_TAG]$2[VAR_CLOSE_TAG]',
             '/(@?{{ *)(.+?)( *}})/m' => '@$1$2$3',
             '/(@?{!! *)(.+?)( *!!})/m' => '@$1$2$3',
             '/(@\w+)/m' => '@$1',
+            '/^\s+$/m' => '',
+            '/([ \t]*)(#)(' . implode('|', $keywords) . ')/m' => '$2$3',
             '/(#)(' . implode('|', $keywords) . ')/m' => '@$2',
         ];
 
@@ -533,7 +371,7 @@ class CrudCommand extends Command
         file_put_contents($tempPath, $stub);
         $tmpl = view($tempBlade, $data)->render();
 
-        unlink(resource_path("views/${tempBlade}.blade.php"));
+        // unlink(resource_path("views/${tempBlade}.blade.php"));
 
         $decodes = [
             '[PHP_OPEN_TAG]' => '<?php',
@@ -544,6 +382,8 @@ class CrudCommand extends Command
             '[COMMENT_CLOSE_TAG]' => '--}}',
             '[STUBVAR_OPEN_TAG]' => '{{ ',
             '[STUBVAR_CLOSE_TAG]' => ' }}',
+            '[VAR_OPEN_TAG]' => '{{ ',
+            '[VAR_CLOSE_TAG]' => ' }}',
         ];
 
         foreach ($decodes as $key => $value) {
@@ -566,17 +406,19 @@ class CrudCommand extends Command
         $this->insertToFile($resourceRoute, $routePath, 0);
     }
 
-    protected function deleteCrud($name)
+    protected function deleteCrud()
     {
-        $lName = Str::lower($name);
-        $lpName = Str::plural($lName);
+        $this->line('Delete crud...');
+
+        $name = $this->argument('name');
+        $resourceName = Str::lower(Str::plural($name));
 
         //Delete route
         $this->line('Delete route...');
         $routePath = base_path('routes/web.php');
         $controllerNamespace = "\nuse App\Http\Controllers\\${name}Controller;";
         $this->replaceInFile($controllerNamespace, '', $routePath);
-        $resourceRoute = "\nRoute::resource('${lpName}', ${name}Controller::class);";
+        $resourceRoute = "\nRoute::resource('${resourceName}', ${name}Controller::class);";
         $this->replaceInFile($resourceRoute, '', $routePath);
 
         //delete controller
@@ -591,7 +433,7 @@ class CrudCommand extends Command
 
         //delete views
         $this->line('Delete views...');
-        $viewsPath = resource_path("views/${lpName}");
+        $viewsPath = resource_path("views/${resourceName}");
         $this->deleteIfExists($viewsPath);
 
         return 0;

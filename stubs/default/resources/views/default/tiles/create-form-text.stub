@@ -1,5 +1,0 @@
-                        <div class="mt-4">
-                            <label class="block font-medium text-sm text-gray-700" for="{{ id }}">{{ __('{{ title }}') }}</label>
-                            <input id="{{ id }}" type="{{ type }}" name="{{ field }}" value="{{ old('{{ field }}') }}" {{ required }}
-                                class="rounded-md shadow-sm border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 block mt-1 w-full"/>
-                        </div>

@@ -37,9 +37,9 @@ class {{ name }}Controller extends Controller
     public function store(Request $request)
     {
         $request->validate([
-        #foreach($validations as $key => $value)
+            #foreach($validations as $key => $value)
             '{{ key }}' => '{{ value }}',
-        #endforeach
+            #endforeach
         ]);
 
         ${{ instanceName }} = {{ name }}::create([
